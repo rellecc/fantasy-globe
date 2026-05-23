@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy World Globe</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+    canvas { display: block; }
+   
+    #controls {
+      position: absolute; top: 15px; left: 15px; background: rgba(15, 15, 35, 0.96);
+      color: white; padding: 18px; border-radius: 12px; width: 280px; z-index: 1000;
+      border: 1px solid #666; box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+    }
+    #toggleBtn {
+      position: absolute; top: 15px; left: 310px; z-index: 1001;
+      background: #222; color: white; border: none; padding: 10px 16px;
+      border-radius: 8px; cursor: pointer; font-weight: bold;
+    }
+    label { display: block; margin: 12px 0 5px; font-size: 0.95em; }
+    select, button, input[type="range"] {
+      width: 100%; padding: 9px; background: #1e1e2e; color: white;
+      border: 1px solid #777; border-radius: 6px;
+    }
+    button {
+      margin: 8px 0;
+      background: #334;
+      cursor: pointer;
+    }
+    button:hover { background: #447; }
+    h2 { margin: 0 0 15px 0; color: #88ccff; }
+    .section { margin-bottom: 18px; padding-bottom: 15px; border-bottom: 1px solid #444; }
+    .section:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+  <button id="toggleBtn">☰ Controls</button>
+ 
+  <div id="controls">
+    <h2>🌍 Fantasy Globe</h2>
+    <div class="section">
+      <label>Map Style:</label>
+      <select id="mapSelect">
+        <option value="https://i.imgur.com/M8JnMkG.jpeg">Normal Map</option>
+        <option value="https://i.imgur.com/Iftv9EI.jpeg">With Icons</option>
+      </select>
+    </div>
+    <div class="section">
+      <label>Background:</label>
+      <select id="bgSelect">
+        <option value="https://i.imgur.com/vTeBWx2.jpeg">Galaxy 1</option>
+        <option value="https://i.imgur.com/6nYvgYJ.jpeg">Galaxy 2</option>
+        <option value="https://i.imgur.com/WMY7c8O.jpeg">Galaxy 3</option>
+        <option value="black">Pure Black</option>
+        <option value="blue">Deep Blue</option>
+      </select>
+    </div>
+    <div class="section">
+      <label>Rotation Control:</label>
+      <label>
+        <input type="checkbox" id="autoRotate" checked> Auto Rotate
+      </label>
+      <label>Speed: <span id="speedValue">0.00022</span></label>
+      <input type="range" id="rotSpeed" min="-0.01" max="0.01" step="0.0001" value="0.00022">
+     
+      <div style="display:flex; gap:6px; margin-top:8px;">
+        <button id="pauseBtn">Pause</button>
+        <button id="normalBtn">Normal</button>
+        <button id="fastBtn">Fast Spin</button>
+      </div>
+    </div>
+    <div class="section">
+      <button id="resetView">Reset Camera</button>
+      <button id="randomBg">🎲 Random Background</button>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.12;
+    controls.minDistance = 3;
+    controls.maxDistance = 45;
+    const geometry = new THREE.SphereGeometry(2, 256, 256);
+    const textureLoader = new THREE.TextureLoader();
+    let globe, backgroundMesh;
+    let autoRotate = true;
+    let rotationSpeed = 0.00022;
+    function createGlobe(mapUrl) {
+      if (globe) scene.remove(globe);
+      const texture = textureLoader.load(mapUrl, () => {
+        texture.anisotropy = 16;
+      });
+      const material = new THREE.MeshBasicMaterial({ map: texture });
+      globe = new THREE.Mesh(geometry, material);
+      scene.add(globe);
+    }
+    function createBackground(bgValue) {
+      if (backgroundMesh) scene.remove(backgroundMesh);
+      if (bgValue === "black") {
+        scene.background = new THREE.Color(0x000000);
+        backgroundMesh = null;
+      } else if (bgValue === "blue") {
+        scene.background = new THREE.Color(0x000033);
+        backgroundMesh = null;
+      } else {
+        scene.background = null;
+        const bgGeo = new THREE.SphereGeometry(95, 64, 64);
+        const bgTex = textureLoader.load(bgValue);
+        const bgMat = new THREE.MeshBasicMaterial({ map: bgTex, side: THREE.BackSide });
+        backgroundMesh = new THREE.Mesh(bgGeo, bgMat);
+        scene.add(backgroundMesh);
+      }
+    }
+    // Initial setup
+    createGlobe("https://i.imgur.com/M8JnMkG.jpeg");
+    createBackground("https://i.imgur.com/vTeBWx2.jpeg");
+    camera.position.z = 6.5;
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+     
+      if (autoRotate && globe) {
+        globe.rotation.y += rotationSpeed;
+      }
+     
+      renderer.render(scene, camera);
+    }
+    animate();
+    // UI Controls
+    const mapSelect = document.getElementById('mapSelect');
+    const bgSelect = document.getElementById('bgSelect');
+    const toggleBtn = document.getElementById('toggleBtn');
+    const controlsPanel = document.getElementById('controls');
+    const autoRotateCheck = document.getElementById('autoRotate');
+    const rotSpeedSlider = document.getElementById('rotSpeed');
+    const speedValue = document.getElementById('speedValue');
+    mapSelect.addEventListener('change', () => createGlobe(mapSelect.value));
+    bgSelect.addEventListener('change', () => createBackground(bgSelect.value));
+    autoRotateCheck.addEventListener('change', () => autoRotate = autoRotateCheck.checked);
+   
+    rotSpeedSlider.addEventListener('input', () => {
+      rotationSpeed = parseFloat(rotSpeedSlider.value);
+      speedValue.textContent = rotationSpeed.toFixed(5);
+    });
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      autoRotate = false;
+      autoRotateCheck.checked = false;
+    });
+    document.getElementById('normalBtn').addEventListener('click', () => {
+      rotationSpeed = 0.00022;
+      rotSpeedSlider.value = 0.00022;
+      speedValue.textContent = "0.00022";
+    });
+    document.getElementById('fastBtn').addEventListener('click', () => {
+      rotationSpeed = 0.005;
+      rotSpeedSlider.value = 0.005;
+      speedValue.textContent = "0.00500";
+    });
+    document.getElementById('resetView').addEventListener('click', () => {
+      camera.position.set(0, 0, 6.5);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    });
+    document.getElementById('randomBg').addEventListener('click', () => {
+      const options = Array.from(bgSelect.options);
+      const random = options[Math.floor(Math.random() * options.length)].value;
+      bgSelect.value = random;
+      createBackground(random);
+    });
+    toggleBtn.addEventListener('click', () => {
+      if (controlsPanel.style.display === 'none') {
+        controlsPanel.style.display = 'block';
+        toggleBtn.textContent = '✕ Close';
+      } else {
+        controlsPanel.style.display = 'none';
+        toggleBtn.textContent = '☰ Controls';
+      }
+    });
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
